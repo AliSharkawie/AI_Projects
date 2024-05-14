@@ -1,0 +1,107 @@
+# Ali mohamed Abdelaty Mohamed
+# 20200334
+# Noor Eldeen Mahmdoh
+# 20190594
+
+import numpy as np
+from skimage.feature import hog
+from keras.datasets import mnist
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score
+import matplotlib.pyplot as plt
+import cv2
+from math import sqrt, atan, degrees, ceil, floor
+
+# Load the MNIST dataset
+(X_train, y_train), (X_test, y_test) = mnist.load_data()
+
+# Define HOG parameters
+orientations = 9
+pixels_per_cell = (8, 8)
+cells_per_block = (2, 2)
+
+# Function to compute HOG features for a single image
+def compute_hog_features(image):
+    return hog(image, orientations=orientations, pixels_per_cell=pixels_per_cell,
+               cells_per_block=cells_per_block, block_norm='L2-Hys')
+
+# Apply HOG feature extraction to training and testing images
+X_train_hog = np.array([compute_hog_features(image) for image in X_train])
+X_test_hog = np.array([compute_hog_features(image) for image in X_test])
+
+# Train SVM classifier
+svm_classifier = SVC(kernel='linear')
+svm_classifier.fit(X_train_hog, y_train)
+
+# Predict on test set
+y_pred = svm_classifier.predict(X_test_hog)
+
+# Calculate accuracy
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy in Built in HOG: ", accuracy)
+
+
+################################################################
+
+def resize_zero_padding(image, new_size):
+    scale = new_size[1] / 28
+    padded_image = np.zeros((new_size[0], new_size[1]), dtype=np.uint8)
+    start_x = (new_size[1] - 28) // 2
+    start_y = (new_size[0] - 28) // 2
+    for i in range(start_x, start_x + 28):
+        for j in range(start_y, start_y + 28):
+            if i - start_y < 0 or i - start_y >= image.shape[0] or j - start_x < 0 or j - start_x >= image.shape[1]:
+                padded_image[i, j] = 0  # Handle out-of-boundary pixels
+            else:
+                padded_image[i, j] = image[i - start_y, j - start_x]
+    return padded_image
+
+def HOG(img):
+    img = resize_zero_padding(img, (34, 34))
+    final_feature = []
+    for ii in range(1, 34, 16):
+        if ii > 18:
+            break
+        for jj in range(1, 34, 8):
+            if jj > 26:
+                break
+            for i in range(ii, ii + 16, 8):
+                for j in range(jj, jj + 16, 8):
+                    values = np.zeros(9)
+                    for m in range(i, i + 8):
+                        for n in range(j, j + 8):
+                            if n + 1 < 34 and m + 1 < 34:
+                                gx = img[m, n + 1].astype(np.int64) - img[m, n - 1].astype(np.int64)
+                                gy = img[m + 1, n].astype(np.int64) - img[m - 1, n].astype(np.int64)
+                                magnitude = sqrt(pow(gx, 2) + pow(gy, 2))
+                                if gx == 0:
+                                    phase = 0
+                                else:
+                                    phase = gy / gx
+                                angle_degrees = degrees(atan(phase))
+                                index = int(angle_degrees / 20)
+                                values[index] += (ceil(index) * 20 - angle_degrees) * magnitude
+                                values[(index + 1) % 9] += (angle_degrees - floor(index) * 20) * magnitude
+                    final_feature.extend(values)
+    final_feature = np.array(final_feature)
+    sum_of_squares = np.sum(final_feature ** 2)
+    normalization_factor = sqrt(sum_of_squares)
+    normalized_feature = final_feature / normalization_factor
+    return normalized_feature
+
+# Load Data
+(X_train, y_train), (X_test, y_test) = mnist.load_data()
+
+X_train_hog = np.array([HOG(image) for image in X_train])
+X_test_hog = np.array([HOG(image) for image in X_test])
+
+# Train SVM 
+svm_classifier = SVC(kernel='linear')
+svm_classifier.fit(X_train_hog, y_train)
+
+# Predict 
+y_pred = svm_classifier.predict(X_test_hog)
+
+# Calculate accuracy
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy in our implemented HOG: ", accuracy)

@@ -1,0 +1,33 @@
+# CV_A1
+# 20200334
+# Ali Mohamed Abdelaty Mohamed Sobieh
+
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Load input images
+cat = cv2.imread('cat.jpg')
+dog = cv2.imread('dog.jpg')
+
+cutoff_frequency = 5
+# Low Frequency for the 2 images ( Gaussian )
+cat_low_frequency = cv2.GaussianBlur(cat, (0, 0), cutoff_frequency)
+dog_low_frequency = cv2.GaussianBlur(dog, (0, 0), cutoff_frequency)
+
+# High frequency by substraciton ( Lablacian by substraction the low frequency)
+# I used the substration because sobel and built-in Lablacian give me bad results
+cat_high_frequency = cv2.subtract(cat, cat_low_frequency)
+dog_high_frequency = cv2.subtract(dog, dog_low_frequency)
+
+# Combine high frequency components of img1 with low frequency components of img2
+# the hybrid image
+# cat high (details) , Dog low ( colors )
+hybrid_img = cat_high_frequency + dog_low_frequency
+
+
+# Display hybrid image using matplotlib
+plt.imshow(hybrid_img, cmap='gray')
+plt.axis('off')
+plt.title('Hybrid Image \n details(high frequency) of cat and colors(low frequency) of dog \n')
+plt.show()
